@@ -49,17 +49,38 @@ class AfmPageWidget(QWidget):
         # ── GUI Setup ─────────────────────────────
         layout = QVBoxLayout(self)
 
-        win = pg.GraphicsLayoutWidget(title="Gimbal angle (°)")
-        layout.addWidget(win)
+        # 1) A dedicated container that will hold BOTH the GraphicsLayoutWidget
+        #    *and* the Back button.
+        graph_holder = QtWidgets.QWidget(self)
+        graph_holder.setObjectName("GraphHolder")
 
-        self.plot = win.addPlot(labels={"left": "angle (°)", "bottom": "time (s)"})
+        # zero-margin layout so the plot fills the whole thing
+        gh_layout = QVBoxLayout(graph_holder)
+        gh_layout.setContentsMargins(0, 0, 0, 0)
+
+        win = pg.GraphicsLayoutWidget(title="Gimbal angle (°)")
+        gh_layout.addWidget(win)                       # add plot to holder
+        layout.addWidget(graph_holder)                 # add holder to page
+
+        self.plot = win.addPlot(labels={"left": "angle (°)",
+                                        "bottom": "time (s)"})
         self.plot.setYRange(*self.INIT_Y_MINMAX, padding=0)
         self.plot.showGrid(x=True, y=True, alpha=0.3)
 
-        orange_line = pg.InfiniteLine(pos=0.03, angle=0, pen=pg.mkPen("orange", width=2))
+        orange_line = pg.InfiniteLine(pos=0.03, angle=0,
+                                    pen=pg.mkPen("orange", width=2))
         self.plot.addItem(orange_line)
         self.curve = self.plot.plot(pen="y")
 
+        # 2) Create Back button *with graph_holder as its parent* and
+        #    position it manually.
+        self.back_button = QPushButton("Back", graph_holder)
+        self.back_button.setFixedSize(70, 28)          # optional – keeps it tidy
+        self.back_button.move(675, 10)                  # 10 px from top-left
+        self.back_button.raise_()                      # make sure it’s on top
+        self.back_button.clicked.connect(self.go_back)
+
+        # 3) The rest of the controls stay in the main vertical layout
         self.record_button = QPushButton("Record")
         layout.addWidget(self.record_button)
 
@@ -69,8 +90,6 @@ class AfmPageWidget(QWidget):
         self.clear_trial_file_button = QPushButton("Clear Trials")
         layout.addWidget(self.clear_trial_file_button)
 
-        self.back_button = QPushButton("Back")
-        layout.addWidget(self.back_button)
 
         self.trial_label = QLabel("Current Trial: 0 / 10")
         layout.addWidget(self.trial_label)
@@ -90,7 +109,7 @@ class AfmPageWidget(QWidget):
 
         # ── Button Hooks ──────────────────────────
         self.record_button.clicked.connect(self.start_recording)
-        self.map_button.clicked.connect(self.show_topographic_map)
+        self.map_button.clicked.connect(self.on_map_button)
         self.clear_trial_file_button.clicked.connect(self.clear_trial_file)
         self.back_button.clicked.connect(self.go_back)
 
@@ -144,6 +163,24 @@ class AfmPageWidget(QWidget):
                 self.recorded_trial_data.append(self.deg_filt)
             if now - self.record_start_time >= self.RECORD_DURATION:
                 self.stop_recording()
+                
+    def _full_reset(self):
+        """Clear plot data, zero the clock, and close the serial port."""
+        if self.ser and self.ser.is_open:
+            self.ser.close()
+
+        self.data_t.clear()
+        self.data_deg.clear()
+        self.t0       = None
+        self.deg_filt = 0.0
+        self.curve.clear()
+        # (leave trial counters alone – they reflect trials.txt)
+
+    def _resume_if_needed(self):
+        """Called when the page becomes visible. Re-init only if stopped."""
+        if not self.timer.isActive():          # means we left to menu before
+            self.init_serial()                 # reopen USB
+            self.timer.start(self.TIMER_MS)    # resume periodic updates
 
     def start_recording(self):
         if self.trial_index >= self.MAX_TRIALS:
@@ -163,17 +200,17 @@ class AfmPageWidget(QWidget):
             f.write("")
         self.trial_index = 0
 
-    def show_topographic_map(self):
-        if not os.path.exists(self.TRIAL_FILE): return
-        with open(self.TRIAL_FILE) as f:
-            lines = f.readlines()
-        data = [list(map(float, line.strip().split(","))) for line in lines[:self.MAX_TRIALS]]
-        plt.imshow(np.array(data), cmap="Greens", aspect="auto")
-        plt.colorbar()
-        plt.show()
+    def on_map_button(self):
+        """User pressed 'Map' → tell MainWindow to flip pages."""
+        self.map_requested.emit()
+
+    def showEvent(self, event):
+        self._resume_if_needed()       # ← add this line
+        super().showEvent(event)
 
     def go_back(self):
         self.timer.stop()
+        self._full_reset()
         self.back_requested.emit()
 
     def closeEvent(self, event):

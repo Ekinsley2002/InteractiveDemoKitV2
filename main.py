@@ -39,6 +39,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.topo_page)
 
         # connect AfmPageWidget to TopographyPageWidget
+        self.afm_page.map_requested.connect(self.topo_page.refresh)
         self.afm_page.map_requested.connect(
             lambda: self.stack.setCurrentWidget(self.topo_page)
         )
