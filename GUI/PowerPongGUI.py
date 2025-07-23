@@ -1,20 +1,28 @@
+# power_pong_page.py  – full path-safe version
+from pathlib import Path
+
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 )
 from PyQt6.QtCore import Qt, QSize, pyqtSignal
 from PyQt6.QtGui  import QIcon, QCursor
 
 
+# -------------------------------------------------------------------
+PROJECT_ROOT = Path(__file__).resolve().parent.parent   # …/InteractiveDemoKitV2-1
+IMAGES_DIR   = PROJECT_ROOT / "images"
+STYLES_DIR   = PROJECT_ROOT / "Styles"
+
+
 # ────────────────────────────────────────────────────────────────
 class Picker(QWidget):
+    """One vertical picker column with ▲ / ▼ / Add."""
     value_added = pyqtSignal(int)
 
-    COL_W = 200        # single source-of-truth width
+    COL_W = 200
 
     def __init__(self, title: str, parent: QWidget | None = None):
         super().__init__(parent)
-
         self._value = 0
 
         v = QVBoxLayout(self)
@@ -23,18 +31,18 @@ class Picker(QWidget):
 
         title_lbl = QLabel(title, alignment=Qt.AlignmentFlag.AlignCenter)
         title_lbl.setObjectName("PickerTitle")
-        title_lbl.setFixedWidth(self.COL_W)     # prevent clipping
+        title_lbl.setFixedWidth(self.COL_W)
 
         self.value_lbl = QLabel("0", alignment=Qt.AlignmentFlag.AlignCenter)
         self.value_lbl.setObjectName("ValueDisplay")
         self.value_lbl.setFixedSize(self.COL_W, 64)
 
-        up_btn   = self._make_arrow("images/arrow_up.png",   +1)
-        down_btn = self._make_arrow("images/arrow_down.png", -1)
+        up_btn   = self._make_arrow("arrow_up.png",   +1)
+        down_btn = self._make_arrow("arrow_down.png", -1)
 
         add_btn  = QPushButton("Add")
         add_btn.setObjectName("AddBtn")
-        add_btn.setFixedSize(20, 44)
+        add_btn.setFixedSize(120, 44)
         add_btn.clicked.connect(self._emit_add)
 
         v.addWidget(title_lbl)
@@ -42,15 +50,16 @@ class Picker(QWidget):
         v.addWidget(self.value_lbl)
         v.addWidget(down_btn)
         v.addStretch(1)
-        v.addWidget(add_btn)
+        v.addWidget(add_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
     # helpers ------------------------------------------------------
-    def _make_arrow(self, path: str, delta: int) -> QPushButton:
-        btn = QPushButton()
+    def _make_arrow(self, filename: str, delta: int) -> QPushButton:
+        path = IMAGES_DIR / filename
+        btn  = QPushButton()
         btn.setObjectName("ArrowBtn")
-        btn.setIcon(QIcon(path))
+        btn.setIcon(QIcon(str(path)))
         btn.setIconSize(QSize(40, 40))
-        btn.setFixedSize(self.COL_W, 64)        # full column width
+        btn.setFixedSize(self.COL_W, 64)
         btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         btn.clicked.connect(lambda: self._bump(delta))
         return btn
@@ -86,20 +95,19 @@ class PowerPongPageWidget(QWidget):
         self.speed_picker  = Picker("Speed")
         self.offset_picker = Picker("Offset")
 
-        # example handlers
-        self.speed_picker.value_added.connect(lambda v: print("Speed added:", v))
+        self.speed_picker.value_added.connect(lambda v: print("Speed added:",  v))
         self.offset_picker.value_added.connect(lambda v: print("Offset added:", v))
 
-        row.addStretch(1)                    # left margin
+        row.addStretch(1)
         row.addWidget(self.speed_picker)
         row.addWidget(self.offset_picker)
-        row.addStretch(1)                    # space before FORE!
+        row.addStretch(1)
 
         fore_btn = QPushButton("FORE!")
         fore_btn.setObjectName("ForeBtn")
         row.addWidget(fore_btn)
 
-        row.addStretch(1)                    # right margin
+        row.addStretch(1)
         root.addLayout(row, stretch=1)
 
         # ───────── BACK ─────────
@@ -108,6 +116,6 @@ class PowerPongPageWidget(QWidget):
         back_btn.clicked.connect(self.back_requested.emit)
         root.addWidget(back_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        # QSS
-        with open("Styles/stylePowerPongPage.qss") as f:
-            self.setStyleSheet(f.read())
+        # ───────── QSS ─────────
+        css_file = STYLES_DIR / "stylePowerPongPage.qss"
+        self.setStyleSheet(css_file.read_text())

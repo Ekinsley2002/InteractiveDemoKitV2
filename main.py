@@ -26,9 +26,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.PORT = "/dev/cu.usbmodem14101"
-        # PORT = "/dev/ttyACM0"
-        
+        #self.PORT = "/dev/cu.usbmodem14101"
+        self.PORT = "/dev/ttyACM0"
+
         self.BAUD = 115_200
         self.ser  = serial.Serial(self.PORT, self.BAUD, timeout=1)
 
@@ -41,11 +41,11 @@ class MainWindow(QMainWindow):
 
         # If you prefer the app to occupy the full LCD without borders,
         # uncomment the next line instead of setFixedSize:
-        #self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-        #self.showFullScreen()
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.showFullScreen()
 
         # Hide the cursor
-        #self.setCursor(QCursor(Qt.CursorShape.BlankCursor))
+        self.setCursor(QCursor(Qt.CursorShape.BlankCursor))
 
         # ── stacked-page container ──────────────────────────────────
         self.stack = QStackedWidget(self)
