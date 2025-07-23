@@ -27,6 +27,8 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.PORT = "/dev/cu.usbmodem14101"
+        # PORT = "/dev/ttyACM0"
+        
         self.BAUD = 115_200
         self.ser  = serial.Serial(self.PORT, self.BAUD, timeout=1)
 

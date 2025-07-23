@@ -16,13 +16,13 @@ class MenuPage(QWidget):
                     self.setStyleSheet(f.read())
 
         lay = QVBoxLayout(self)
-        lay.setSpacing(16)
+        lay.setSpacing(20)
 
         # logo
         logo_lbl = QLabel()
         logo_lbl.setPixmap(
             QPixmap("images/logo.png")
-            .scaledToWidth(150, Qt.TransformationMode.SmoothTransformation)
+            .scaledToWidth(100, Qt.TransformationMode.SmoothTransformation)
         )
         logo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(logo_lbl, alignment=Qt.AlignmentFlag.AlignHCenter)
